@@ -19,6 +19,9 @@ public class Main {
         case "-server":
           System.out.println("Starting server");
           SearchServer.start();
+        case "-nlp":
+          System.out.println("Named entity extractor");
+          EntityExtractor.start();
       }
     } else {
       System.out.println("Search by console input");

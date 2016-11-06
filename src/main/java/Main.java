@@ -1,9 +1,9 @@
-package ru.spbau.mit;
-
+import data.IndexBuilder;
 import org.apache.lucene.queryparser.classic.ParseException;
+import search.SearchResponse;
+import search.Searcher;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Scanner;
 
 public class Main {
@@ -14,14 +14,12 @@ public class Main {
       switch (arg) {
         case "-build":
           System.out.println("Building index");
-          ReviewsIndex.build();
+          IndexBuilder.build();
           break;
         case "-server":
           System.out.println("Starting server");
           SearchServer.start();
-        case "-nlp":
-          System.out.println("Named entity extractor");
-          EntityExtractor.start();
+          break;
       }
     } else {
       System.out.println("Search by console input");
@@ -31,11 +29,13 @@ public class Main {
 
   private static void startSearch() throws ParseException, IOException {
     Searcher searcher = new Searcher();
-    try (Scanner scanner = new Scanner(System.in);
-         PrintWriter writer = new PrintWriter(System.out)) {
+    try (Scanner scanner = new Scanner(System.in)) {
       while (scanner.hasNextLine()) {
         String line = scanner.nextLine();
-        searcher.search(line, writer);
+        SearchResponse[] responses = searcher.search(line);
+        for (int i = 0; i < responses.length; i++) {
+          System.out.println((i + 1) + ": " + responses[i].getName() + ", score = " + responses[i].getScore());
+        }
       }
     }
   }

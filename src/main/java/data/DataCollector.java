@@ -15,7 +15,15 @@ public class DataCollector {
     List<MovieMetadata> movies = MovieMetadata.collect();
     System.out.println("Number of movies with metadata = " + movies.size());
 
-    Map<String, String> asinToReviews = AmazonReviews.collectReviews(new HashSet<>(nameToAsin.values()));
+    Set<String> usedAsins = new HashSet<>();
+    for (MovieMetadata movie : movies) {
+      String asin = nameToAsin.get(movie.getName());
+      if (asin != null) {
+        usedAsins.add(asin);
+      }
+    }
+    System.out.println("usedAsins.size() = " + usedAsins.size());
+    Map<String, String> asinToReviews = AmazonReviews.collectReviews(usedAsins);
     Set<String> nameAsins = new HashSet<>(nameToAsin.values());
     System.out.println("nameAsins.size() = " + nameAsins.size());
 

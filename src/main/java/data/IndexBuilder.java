@@ -30,13 +30,17 @@ public class IndexBuilder {
       }
       Document document = new Document();
       document.add(new IntField("wikiId", movie.getWikiId(), Field.Store.YES));
+      document.add(new StringField("asin", nonNull(movie.getAsin()), Field.Store.YES));
       document.add(new StringField("name", movie.getName(), Field.Store.YES));
-      String summary = movie.getSummary();
-      document.add(new TextField("summary", summary != null ? summary : "", Field.Store.YES));
-      String reviews = movie.getReviews();
-      document.add(new TextField("reviews", reviews != null ? reviews : "", Field.Store.YES));
+      document.add(new StringField("date", movie.getDate(), Field.Store.YES));
+      document.add(new TextField("summary", nonNull(movie.getSummary()), Field.Store.YES));
+      document.add(new TextField("reviews", nonNull(movie.getReviews()), Field.Store.YES));
       writer.addDocument(document);
     }
     writer.close();
+  }
+
+  private static String nonNull(String value) {
+    return value != null ? value : "";
   }
 }

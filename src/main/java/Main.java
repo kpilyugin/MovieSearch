@@ -1,5 +1,6 @@
 import data.IndexBuilder;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import search.SearchResponse;
 import search.Searcher;
 
@@ -27,14 +28,14 @@ public class Main {
     }
   }
 
-  private static void startSearch() throws ParseException, IOException {
+  private static void startSearch() throws ParseException, IOException, InvalidTokenOffsetsException {
     Searcher searcher = new Searcher();
     try (Scanner scanner = new Scanner(System.in)) {
       while (scanner.hasNextLine()) {
         String line = scanner.nextLine();
         SearchResponse[] responses = searcher.search(line);
         for (int i = 0; i < responses.length; i++) {
-          System.out.println((i + 1) + ": " + responses[i].getName() + ", score = " + responses[i].getScore());
+          System.out.println((i + 1) + ": " + responses[i]);
         }
       }
     }

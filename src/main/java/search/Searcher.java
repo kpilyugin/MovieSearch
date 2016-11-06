@@ -19,7 +19,7 @@ import java.nio.file.Paths;
 
 public class Searcher {
 
-  private static final int NUM_RESULTS = 5;
+  private static final int NUM_RESULTS = 20;
 
   private final StandardAnalyzer analyzer = new StandardAnalyzer();
   private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class PlotSummary {
-  public static final String FILE = "MovieSummaries/plot_summaries.txt";
+  public static final String FILE = "plot_summaries.txt";
 
   public static Map<Integer, String> collectSummaries() {
     try (Scanner scanner = new Scanner(new FileReader(FILE))) {

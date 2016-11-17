@@ -1,10 +1,11 @@
-import data.IndexBuilder;
+import index.IndexBuilder;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import search.SearchResponse;
 import search.Searcher;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 public class Main {
@@ -28,7 +29,7 @@ public class Main {
     }
   }
 
-  private static void startSearch() throws ParseException, IOException, InvalidTokenOffsetsException {
+  private static void startSearch() throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
     Searcher searcher = new Searcher();
     try (Scanner scanner = new Scanner(System.in)) {
       while (scanner.hasNextLine()) {

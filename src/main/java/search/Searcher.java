@@ -1,6 +1,6 @@
 package search;
 
-import data.IndexBuilder;
+import index.IndexBuilder;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -19,6 +19,9 @@ import org.apache.lucene.store.FSDirectory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.sql.*;
+
+import static index.IndexBuilder.DATABASE;
 
 public class Searcher {
 
@@ -33,14 +36,14 @@ public class Searcher {
   public Searcher() throws IOException {
   }
 
-  public SearchResponse[] search(String line) throws ParseException, IOException, InvalidTokenOffsetsException {
+  public SearchResponse[] search(String line) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
     SearchResponse[] fromSummary = doSearch(false, line);
     SearchResponse[] fromReviews = doSearch(true, line);
     return ArrayUtils.addAll(fromSummary, fromReviews);
   }
 
-  private SearchResponse[] doSearch(boolean inReviews, String line) throws ParseException, IOException, InvalidTokenOffsetsException {
-    String field = inReviews ? "reviews" : "summary";
+  private SearchResponse[] doSearch(boolean inReviews, String line) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
+    String field = inReviews ? "reviews" : "plot";
     Query query = new QueryParser(field, analyzer).parse(line);
     TopDocs docs = searcher.search(query, NUM_RESULTS);
     ScoreDoc[] hits = docs.scoreDocs;
@@ -51,18 +54,24 @@ public class Searcher {
     Highlighter highlighter = new Highlighter(scorer);
     highlighter.setTextFragmenter(fragmenter);
 
+    Connection connection = DriverManager.getConnection(DATABASE, "ir", "");
+    Statement statement = connection.createStatement();
+
     for (int i = 0; i < hits.length; ++i) {
       ScoreDoc hit = hits[i];
       Document doc = searcher.doc(hit.doc);
-      int wikiId = Integer.parseInt(doc.get("wikiId"));
-      boolean hasReviews = doc.get("reviews").length() > 0;
+      String movieId = doc.get("movie-id");
+
+      ResultSet movieInfo = statement.executeQuery("SELECT * FROM movie WHERE imdb_id = \'" + movieId + "\'");
+      movieInfo.next();
 
       //noinspection deprecation
       TokenStream tokenStream = TokenSources.getAnyTokenStream(reader, hit.doc, field, doc, analyzer);
       String fragment = highlighter.getBestFragment(tokenStream, doc.get(field));
       responses[i] = new SearchResponse(
-          wikiId, doc.get("asin"), doc.get("name"), doc.get("date"),
-          hit.score, inReviews, hasReviews, fragment
+          movieId, movieInfo.getString("title"), movieInfo.getString("plot"),
+          movieInfo.getString("date"), movieInfo.getString("poster_url"),
+          hit.score, inReviews, fragment
       );
     }
     return responses;

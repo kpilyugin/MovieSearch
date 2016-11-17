@@ -67,6 +67,25 @@ public class SearchServer {
 
   @Data
   private static class MyResponse {
-    private final SearchResponse[] data;
+    private final ResponseItem[] data;
+
+    public MyResponse(SearchResponse[] response) {
+      data = new ResponseItem[response.length];
+      for (int i = 0; i < response.length; i++) {
+        data[i] = new ResponseItem(response[i]);
+      }
+    }
+  }
+
+  @Data
+  private static class ResponseItem {
+    private final String id;
+    private final String type = "movie";
+    private final SearchResponse attributes;
+
+    public ResponseItem(SearchResponse response) {
+      this.attributes = response;
+      this.id = response.getMovieId();
+    }
   }
 }

@@ -57,6 +57,7 @@ public class SearchServer {
 
       Gson gson = new GsonBuilder().setPrettyPrinting().create();
       byte[] bytes = gson.toJson(response, SearchResponse[].class).getBytes();
+      httpExchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
       httpExchange.sendResponseHeaders(200, bytes.length);
       output.write(bytes);
       output.close();

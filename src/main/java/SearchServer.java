@@ -3,6 +3,7 @@ import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import lombok.Data;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import search.SearchResponse;
@@ -56,11 +57,16 @@ public class SearchServer {
       }
 
       Gson gson = new GsonBuilder().setPrettyPrinting().create();
-      byte[] bytes = gson.toJson(response, SearchResponse[].class).getBytes();
+      byte[] bytes = gson.toJson(new MyResponse(response), MyResponse.class).getBytes();
       httpExchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
       httpExchange.sendResponseHeaders(200, bytes.length);
       output.write(bytes);
       output.close();
     }
+  }
+
+  @Data
+  private static class MyResponse {
+    private final SearchResponse[] data;
   }
 }

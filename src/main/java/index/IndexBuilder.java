@@ -38,10 +38,11 @@ public class IndexBuilder {
       document.add(new StringField("movie-id", movie.getString("movie_id"), Field.Store.YES));
       document.add(new TextField("plot", movie.getString("plot"), Field.Store.YES));
       document.add(new TextField("reviews", movie.getString("reviews"), Field.Store.YES));
+      document.add(new TextField("preprocessed_plot", movie.getString("preprocessed_plot"), Field.Store.YES));
       writer.addDocument(document);
 
       counter++;
-      if (counter % 100 == 0) {
+      if (counter % 1000 == 0) {
         System.out.println("Processed = " + counter + " movies");
       }
     }

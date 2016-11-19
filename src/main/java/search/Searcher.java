@@ -1,7 +1,7 @@
 package search;
 
 import index.IndexBuilder;
-import org.apache.commons.lang3.ArrayUtils;
+import lombok.Data;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -16,65 +16,95 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import ranking.CandidateInfoProvider;
+import ranking.Ranking;
+import ranking.Ranking.SearchCandidate;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-
-import static index.IndexBuilder.DATABASE;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Searcher {
 
   private static final int NUM_RESULTS = 10;
 
-  private final StandardAnalyzer analyzer = new StandardAnalyzer();
   private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));
   private final IndexReader reader = DirectoryReader.open(index);
-
-  IndexSearcher searcher = new IndexSearcher(reader);
+  private final IndexSearcher searcher = new IndexSearcher(reader);
+  private final StandardAnalyzer analyzer = new StandardAnalyzer();
+  private final Ranking ranking = new Ranking();
 
   public Searcher() throws IOException {
   }
 
-  public SearchResponse[] search(String line) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
-    SearchResponse[] fromSummary = doSearch(false, line);
-    SearchResponse[] fromReviews = doSearch(true, line);
-    return ArrayUtils.addAll(fromSummary, fromReviews);
+  public SearchResponse[] search(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
+    final List<LuceneResult> luceneResults = new ArrayList<>();
+    luceneResults.addAll(doSearch("plot", query));
+    luceneResults.addAll(doSearch("reviews", query));
+    luceneResults.addAll(doSearch("preprocessed_plot", query));
+
+    final Map<String, LuceneResult> uniqueResults = new HashMap<>();
+    for (LuceneResult result : luceneResults) {
+      if (!uniqueResults.containsKey(result.getMovieId())) {
+        uniqueResults.put(result.getMovieId(), result);
+      } else {
+        uniqueResults.put(result.getMovieId(),
+                uniqueResults.get(result.getMovieId()).combine(result));
+      }
+    }
+
+    final List<SearchCandidate> candidates = new ArrayList<>();
+    try (CandidateInfoProvider provider = new CandidateInfoProvider()) {
+      for (LuceneResult result : uniqueResults.values()) {
+        candidates.add(provider.getInfo(result.getMovieId(), result.getScore()));
+      }
+    }
+
+    return ranking.rerank(candidates, query).stream()
+            .map(c -> new SearchResponse(c, uniqueResults.get(c.getMovieId())))
+            .toArray(SearchResponse[]::new);
   }
 
-  private SearchResponse[] doSearch(boolean inReviews, String line) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
-    String field = inReviews ? "reviews" : "plot";
-    Query query = new QueryParser(field, analyzer).parse(line);
+  private List<LuceneResult> doSearch(String field, String queryLine) throws ParseException, IOException, InvalidTokenOffsetsException {
+    List<LuceneResult> results = new ArrayList<>();
+    Query query = new QueryParser(field, analyzer).parse(queryLine);
     TopDocs docs = searcher.search(query, NUM_RESULTS);
-    ScoreDoc[] hits = docs.scoreDocs;
-    SearchResponse[] responses = new SearchResponse[hits.length];
 
     QueryScorer scorer = new QueryScorer(query, field);
     Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);
     Highlighter highlighter = new Highlighter(scorer);
     highlighter.setTextFragmenter(fragmenter);
 
-    Connection connection = DriverManager.getConnection(DATABASE, "ir", "");
-    Statement statement = connection.createStatement();
-
-    for (int i = 0; i < hits.length; ++i) {
-      ScoreDoc hit = hits[i];
+    for (ScoreDoc hit : docs.scoreDocs) {
       Document doc = searcher.doc(hit.doc);
-      String movieId = doc.get("movie-id");
-
-      ResultSet movieInfo = statement.executeQuery("SELECT * FROM movie WHERE imdb_id = \'" + movieId + "\'");
-      movieInfo.next();
 
       //noinspection deprecation
       TokenStream tokenStream = TokenSources.getAnyTokenStream(reader, hit.doc, field, doc, analyzer);
       String fragment = highlighter.getBestFragment(tokenStream, doc.get(field));
-      responses[i] = new SearchResponse(
-          movieId, movieInfo.getString("title"), movieInfo.getString("plot"),
-          movieInfo.getString("date"), movieInfo.getString("poster_url"),
-          hit.score, inReviews, fragment
+      results.add(new LuceneResult(doc.get("movie-id"), hit.score, field, fragment));
+    }
+    return results;
+  }
+
+  @Data
+  public class LuceneResult {
+    private final String movieId;
+    private final double score;
+    private final String origin;
+    private final String fragment;
+
+    public LuceneResult combine(LuceneResult that) {
+      return new LuceneResult(
+              movieId,
+              Math.max(this.score, that.score),
+              this.origin + "," + that.origin,
+              this.fragment + "\n" + that.fragment
       );
     }
-    return responses;
   }
 
 }

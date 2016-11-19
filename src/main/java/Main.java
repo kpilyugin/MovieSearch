@@ -1,6 +1,9 @@
 import index.IndexBuilder;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import preprocessor.PreprocessDbUpdater;
+import ranking.DatasetBuilder;
+import ranking.WordStatsBuilder;
 import search.SearchResponse;
 import search.Searcher;
 
@@ -21,6 +24,18 @@ public class Main {
         case "-server":
           System.out.println("Starting server");
           SearchServer.start();
+          break;
+        case "-preprocess":
+          System.out.println("Preprocessing");
+          PreprocessDbUpdater.start();
+          break;
+        case "-dataset":
+          System.out.println("Building dataset");
+          DatasetBuilder.build();
+          break;
+        case "-wordstats":
+          System.out.println("Building wordstats");
+          WordStatsBuilder.build();
           break;
       }
     } else {

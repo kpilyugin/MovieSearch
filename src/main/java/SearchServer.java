@@ -12,6 +12,7 @@ import search.Searcher;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.sql.SQLException;
 import java.util.List;
 
 public class SearchServer {
@@ -27,7 +28,7 @@ public class SearchServer {
   private static class SearchRequestHandler implements HttpHandler {
     private Searcher searcher = new Searcher();
 
-    SearchRequestHandler() throws IOException {
+    SearchRequestHandler() throws IOException, SQLException {
     }
 
     @Override
@@ -43,25 +44,28 @@ public class SearchServer {
       if (requestString == null) {
         httpExchange.sendResponseHeaders(400, 0);
         output.close();
+        System.err.println("empty request");
         return;
       }
 
-      SearchResponse[] response;
       try {
-        response = searcher.search(requestString);
-      } catch (Exception e) {
-        httpExchange.sendResponseHeaders(500, e.getMessage().length());
-        output.write(e.getMessage().getBytes());
+        SearchResponse[] response = searcher.search(requestString);
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .serializeSpecialFloatingPointValues()
+                .create();
+        byte[] bytes = gson.toJson(new MyResponse(response), MyResponse.class).getBytes();
+        httpExchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        httpExchange.sendResponseHeaders(200, bytes.length);
+        output.write(bytes);
         output.close();
-        return;
+      } catch (Exception e) {
+        String errorMessage = e.getMessage() == null ? e.toString() : e.getMessage();
+        System.err.println("failed to process request: " + errorMessage);
+        httpExchange.sendResponseHeaders(500, errorMessage.length());
+        output.write(errorMessage.getBytes());
+        output.close();
       }
-
-      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-      byte[] bytes = gson.toJson(new MyResponse(response), MyResponse.class).getBytes();
-      httpExchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-      httpExchange.sendResponseHeaders(200, bytes.length);
-      output.write(bytes);
-      output.close();
     }
   }
 

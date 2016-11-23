@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class Searcher {
 
-  private static final int NUM_RESULTS = 10;
+  private static final int CANDIDATES_LIMIT = 100; //
 
   private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));
   private final IndexReader reader = DirectoryReader.open(index);
@@ -72,7 +72,7 @@ public class Searcher {
   private List<LuceneResult> doSearch(String field, String queryLine) throws ParseException, IOException, InvalidTokenOffsetsException {
     List<LuceneResult> results = new ArrayList<>();
     Query query = new QueryParser(field, analyzer).parse(queryLine);
-    TopDocs docs = searcher.search(query, NUM_RESULTS);
+    TopDocs docs = searcher.search(query, CANDIDATES_LIMIT);
 
     QueryScorer scorer = new QueryScorer(query, field);
     Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);

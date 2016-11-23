@@ -22,7 +22,7 @@ public class ScoresCombiner {
 
     public double combine(Map<String, Double> scores) {
         return weights.entrySet().stream()
-                .mapToDouble(e -> e.getValue() * scores.getOrDefault(e.getKey(), 1.0))
+                .mapToDouble(e -> e.getValue() * scores.getOrDefault(e.getKey(), 0.0))
                 .sum();
     }
 }

@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Ranking {
+    private static final int RESULTS_LIMIT = 20;
     private final Preprocessor preprocessor;
     private final ScoresCombiner scoresCombiner;
     private final ScoresCalculator scoresCalculator;
@@ -22,15 +23,15 @@ public class Ranking {
         QueryInfo queryInfo = new QueryInfo(query);
         preprocessor.preprocessQuery(queryInfo);
 
-        for (SearchCandidate candidate : candidates) {
+        candidates.parallelStream().forEach(candidate -> {
             preprocessor.preprocessCandidate(candidate);
             candidate.scores = scoresCalculator.calculateScores(candidate, queryInfo);
             candidate.setFinalScore(scoresCombiner.combine(candidate.scores));
-        }
+        });
 
         return candidates.stream()
                 .sorted(Comparator.comparing(c -> -c.getFinalScore()))
-                .limit(20)
+                .limit(RESULTS_LIMIT)
                 .collect(Collectors.toList());
     }
 

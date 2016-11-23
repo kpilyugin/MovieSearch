@@ -62,6 +62,7 @@ public class SearchServer {
       } catch (Exception e) {
         String errorMessage = e.getMessage() == null ? e.toString() : e.getMessage();
         System.err.println("failed to process request: " + errorMessage);
+        e.printStackTrace();
         httpExchange.sendResponseHeaders(500, errorMessage.length());
         output.write(errorMessage.getBytes());
         output.close();

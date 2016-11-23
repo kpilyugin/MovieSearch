@@ -25,7 +25,7 @@ public class Ranking {
 
         candidates.parallelStream().forEach(candidate -> {
             preprocessor.preprocessCandidate(candidate);
-            candidate.scores = scoresCalculator.calculateScores(candidate, queryInfo);
+            candidate.setScores(scoresCalculator.calculateScores(candidate, queryInfo));
             candidate.setFinalScore(scoresCombiner.combine(candidate.scores));
         });
 

@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class Searcher {
 
-  private static final int CANDIDATES_LIMIT = 100; //
+  private static final int CANDIDATES_LIMIT = 200; //
 
   private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));
   private final IndexReader reader = DirectoryReader.open(index);
@@ -42,6 +42,14 @@ public class Searcher {
   }
 
   public SearchResponse[] search(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
+    final CandidatesResults results = getCandidates(query);
+
+    return ranking.rerank(results.candidates, query).stream()
+            .map(c -> new SearchResponse(c, results.luceneResults.get(c.getMovieId())))
+            .toArray(SearchResponse[]::new);
+  }
+
+  public CandidatesResults getCandidates(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
     final List<LuceneResult> luceneResults = new ArrayList<>();
     luceneResults.addAll(doSearch("plot", query));
     luceneResults.addAll(doSearch("reviews", query));
@@ -64,14 +72,13 @@ public class Searcher {
       }
     }
 
-    return ranking.rerank(candidates, query).stream()
-            .map(c -> new SearchResponse(c, uniqueResults.get(c.getMovieId())))
-            .toArray(SearchResponse[]::new);
+    return new CandidatesResults(uniqueResults, candidates);
   }
 
   private List<LuceneResult> doSearch(String field, String queryLine) throws ParseException, IOException, InvalidTokenOffsetsException {
     List<LuceneResult> results = new ArrayList<>();
-    Query query = new QueryParser(field, analyzer).parse(queryLine);
+    //Query query = new QueryParser(field, analyzer).parse(queryLine);
+    Query query = new QueryParser(field, analyzer).parse(QueryParser.escape(queryLine));
     TopDocs docs = searcher.search(query, CANDIDATES_LIMIT);
 
     QueryScorer scorer = new QueryScorer(query, field);
@@ -105,6 +112,12 @@ public class Searcher {
               this.fragment + "\n" + that.fragment
       );
     }
+  }
+
+  @Data
+  public class CandidatesResults {
+    private final Map<String, LuceneResult> luceneResults;
+    private final List<SearchCandidate> candidates;
   }
 
 }

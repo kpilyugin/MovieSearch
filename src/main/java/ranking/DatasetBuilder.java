@@ -17,6 +17,9 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import ranking.Ranking.QueryInfo;
+import ranking.Ranking.SearchCandidate;
+import search.Searcher;
 
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -24,17 +27,19 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class DatasetBuilder {
     private static final String queriesPath = "/home/ir/src/stackexchange/queries.json";
-    private static final String resultsPath = "/home/ir/src/stackexchange/results.json";
-    private static final int NUM_RESULTS = 300;
+    private static final String resultsPath = "/home/ir/src/stackexchange/results_v2.json";
 
-    private final StandardAnalyzer analyzer = new StandardAnalyzer();
-    private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));
-    private final IndexReader reader = DirectoryReader.open(index);
-    private final IndexSearcher searcher = new IndexSearcher(reader);
+    private final Searcher searcher = new Searcher();
+    private final Preprocessor preprocessor = new Preprocessor();
+    private final ScoresCalculator scoresCalculator = new ScoresCalculator(preprocessor);
 
     public DatasetBuilder() throws IOException {
     }
@@ -44,17 +49,22 @@ public class DatasetBuilder {
             final DatasetBuilder datasetBuilder = new DatasetBuilder();
             final StackExchangeQuery[] queries =
                     new Gson().fromJson(new FileReader(queriesPath), StackExchangeQuery[].class);
-            List<SearchResult> allResults = new ArrayList<>();
-            for (StackExchangeQuery query : queries) {
+            final List<SearchResult> allResults = new ArrayList<>();
+            final AtomicInteger counter = new AtomicInteger();
+            Arrays.stream(queries).parallel().forEach(query -> {
                 try {
-                    List<HitResult> results = datasetBuilder.search(query.title);
-                    HitResult[] hitResults = results.toArray(new HitResult[0]);
-                    SearchResult result = new SearchResult(query, hitResults);
-                    allResults.add(result);
-                } catch (ParseException e) {
+                    final List<HitResult> results = datasetBuilder.search(query.title);
+                    final SearchResult result = new SearchResult(query, results);
+                    synchronized (allResults) {
+                        allResults.add(result);
+                    }
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
+                if (counter.incrementAndGet() % 5 == 0) {
+                    System.out.println("processed: " + counter.get());
+                }
+            });
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             try (FileWriter writer = new FileWriter(resultsPath)) {
                 writer.write(gson.toJson(allResults.toArray(new SearchResult[0])));
@@ -64,33 +74,32 @@ public class DatasetBuilder {
         }
     }
 
-    private List<HitResult> search(String line) throws ParseException, IOException {
-        List<HitResult> results = new ArrayList<>();
-        doSearch("plot", line, results);
-        doSearch("reviews", line, results);
-        doSearch("preprocessed_plot", line, results);
-        return results;
-    }
+    private List<HitResult> search(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
+        List<SearchCandidate> candidates = searcher.getCandidates(query).getCandidates();
 
-    private void doSearch(String field, String line, List<HitResult> out) throws ParseException, IOException {
-        Query query = new QueryParser(field, analyzer).parse(QueryParser.escape(line));
-        TopDocs docs = searcher.search(query, NUM_RESULTS);
-        for (ScoreDoc hit : docs.scoreDocs) {
-            Document doc = searcher.doc(hit.doc);
-            out.add(new HitResult(doc.get("movie-id"), hit.score));
-        }
+        QueryInfo queryInfo = new QueryInfo(query);
+        preprocessor.preprocessQuery(queryInfo);
+
+        candidates.parallelStream().forEach(candidate -> {
+            preprocessor.preprocessCandidate(candidate);
+            candidate.setScores(scoresCalculator.calculateScores(candidate, queryInfo));
+        });
+
+        return candidates.stream()
+                .map(c -> new HitResult(c.getMovieId(), c.getScores()))
+                .collect(Collectors.toList());
     }
 
     @Data
     private static class HitResult {
         private final String id;
-        private final double score;
+        private final Map<String, Double> scores;
     }
 
     @Data
     private static class StackExchangeQuery {
         private final String post_id;
-        private final String[] imdb;
+        private final List<String> imdb;
         private final String title;
         private final String body;
     }
@@ -98,6 +107,6 @@ public class DatasetBuilder {
     @Data
     private static class SearchResult {
         private final StackExchangeQuery query;
-        private final HitResult[] results;
+        private final List<HitResult> results;
     }
 }

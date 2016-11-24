@@ -32,7 +32,7 @@ public class Regression {
         try {
             Regression regression = new Regression();
             regression.trainModel();
-            regression.writeCoefs();
+//            regression.writeCoefs();
 
             regression.evalLuceneRanking();
             regression.evalRegressionRanking();
@@ -56,7 +56,7 @@ public class Regression {
 
     private void writeCoefs() throws IOException {
         double[] coefs = model.coefficients();
-        try (FileWriter writer = new FileWriter(ScoresCombiner.coefFile)) {
+        try (FileWriter writer = new FileWriter(ScoresCombiner.COEF_FILE)) {
             for (int i = 0; i < SCORES.length; i++) {
                 if (coefs[i] != 0) {
                     writer.write(SCORES[i] + " " + coefs[i] + "\n");

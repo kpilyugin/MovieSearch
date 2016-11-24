@@ -49,6 +49,10 @@ public class Searcher {
             .toArray(SearchResponse[]::new);
   }
 
+  public void setCoefFile(String coefFile) {
+    ranking.setCoefFile(coefFile);
+  }
+
   public CandidatesResults getCandidates(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
     final List<LuceneResult> luceneResults = new ArrayList<>();
     luceneResults.addAll(doSearch("plot", query));

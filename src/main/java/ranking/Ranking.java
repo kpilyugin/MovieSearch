@@ -36,6 +36,10 @@ public class Ranking {
                 .collect(Collectors.toList());
     }
 
+    public void setCoefFile(String coefFile) {
+        scoresCombiner.setCoefFile(coefFile);
+    }
+
     @Data
     public static class SearchCandidate {
         private final String movieId;

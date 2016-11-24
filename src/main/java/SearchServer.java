@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpServer;
 import lombok.Data;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import ranking.ScoresCombiner;
 import search.SearchResponse;
 import search.Searcher;
 
@@ -35,11 +36,16 @@ public class SearchServer {
     public void handle(HttpExchange httpExchange) throws IOException {
       final List<NameValuePair> params = URLEncodedUtils.parse(httpExchange.getRequestURI(), "UTF-8");
       String requestString = null;
+      String coefFile = ScoresCombiner.COEF_FILE;
       for (NameValuePair param : params) {
         if (param.getName().equals("q")) {
           requestString = param.getValue();
         }
+        if (param.getName().equals("coef")) {
+          coefFile = param.getValue();
+        }
       }
+      searcher.setCoefFile(coefFile);
       OutputStream output = httpExchange.getResponseBody();
       if (requestString == null) {
         httpExchange.sendResponseHeaders(400, 0);

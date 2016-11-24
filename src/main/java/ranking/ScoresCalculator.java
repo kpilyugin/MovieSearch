@@ -37,6 +37,8 @@ public class ScoresCalculator {
             scores.put("tf-idf_pp", TFIDF(queryInfo.getStats(), candidate.getProcessedPlotsStats(), preprocessor.processedPlotsStat));
             scores.put("bm25_pp", BM25(queryInfo.getStats(), candidate.getProcessedPlotsStats(), preprocessor.processedPlotsStat, PPLOT_DL_AVE));
         }
+        scores.put("has_plot", candidate.getPlotStats().isEmpty() ? 0.0 : 1.0);
+        scores.put("has_pplot", candidate.getProcessedPlotsStats().isEmpty() ? 0.0 : 1.0);
         return scores;
     }
 

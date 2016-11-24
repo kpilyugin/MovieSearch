@@ -65,7 +65,10 @@ public class DatasetBuilder {
                     System.out.println("processed: " + counter.get());
                 }
             });
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            Gson gson = new GsonBuilder()
+                    .setPrettyPrinting()
+                    .serializeSpecialFloatingPointValues()
+                    .create();
             try (FileWriter writer = new FileWriter(resultsPath)) {
                 writer.write(gson.toJson(allResults.toArray(new SearchResult[0])));
             }

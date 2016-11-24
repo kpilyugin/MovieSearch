@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ScoresCombiner {
-    private static final String coefFile = "/home/ir/src/stackexchange/coef.txt";
+    public static final String coefFile = "/home/ir/src/stackexchange/coef.txt";
     private final HashMap<String, Double> weights;
 
     public ScoresCombiner() throws IOException {

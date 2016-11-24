@@ -21,6 +21,9 @@ public class ScoresCalculator {
     //select AVG(char_length(preprocessed_plot)) from search;
     private static final double PPLOT_DL_AVE = 304.5917151541467651;
 
+    public static final String[] SCORES =
+            {"lucene", "review_cnt", "cos-p", "tf-idf_p", "bm25_p", "cos-pp", "tf-idf_pp", "bm25_pp"};
+
     private final Preprocessor preprocessor;
 
     public ScoresCalculator(Preprocessor preprocessor) {

@@ -2,21 +2,8 @@ package ranking;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import index.IndexBuilder;
-import lombok.Data;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.highlight.*;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import ranking.Ranking.QueryInfo;
 import ranking.Ranking.SearchCandidate;
 import search.Searcher;
@@ -24,18 +11,18 @@ import search.Searcher;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Paths;
-import java.sql.*;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static ranking.DatasetEntry.*;
+
 public class DatasetBuilder {
     private static final String queriesPath = "/home/ir/src/stackexchange/queries.json";
-    private static final String resultsPath = "/home/ir/src/stackexchange/results_v2.json";
+    public static final String resultsPath = "/home/ir/src/stackexchange/results_v2.json";
 
     private final Searcher searcher = new Searcher();
     private final Preprocessor preprocessor = new Preprocessor();
@@ -49,12 +36,12 @@ public class DatasetBuilder {
             final DatasetBuilder datasetBuilder = new DatasetBuilder();
             final StackExchangeQuery[] queries =
                     new Gson().fromJson(new FileReader(queriesPath), StackExchangeQuery[].class);
-            final List<SearchResult> allResults = new ArrayList<>();
+            final List<DatasetEntry> allResults = new ArrayList<>();
             final AtomicInteger counter = new AtomicInteger();
             Arrays.stream(queries).parallel().forEach(query -> {
                 try {
-                    final List<HitResult> results = datasetBuilder.search(query.title);
-                    final SearchResult result = new SearchResult(query, results);
+                    final List<HitResult> results = datasetBuilder.search(query.getTitle());
+                    final DatasetEntry result = new DatasetEntry(query, results);
                     synchronized (allResults) {
                         allResults.add(result);
                     }
@@ -70,7 +57,7 @@ public class DatasetBuilder {
                     .serializeSpecialFloatingPointValues()
                     .create();
             try (FileWriter writer = new FileWriter(resultsPath)) {
-                writer.write(gson.toJson(allResults.toArray(new SearchResult[0])));
+                writer.write(gson.toJson(allResults.toArray(new DatasetEntry[0])));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -93,23 +80,4 @@ public class DatasetBuilder {
                 .collect(Collectors.toList());
     }
 
-    @Data
-    private static class HitResult {
-        private final String id;
-        private final Map<String, Double> scores;
-    }
-
-    @Data
-    private static class StackExchangeQuery {
-        private final String post_id;
-        private final List<String> imdb;
-        private final String title;
-        private final String body;
-    }
-
-    @Data
-    private static class SearchResult {
-        private final StackExchangeQuery query;
-        private final List<HitResult> results;
-    }
 }

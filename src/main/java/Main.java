@@ -3,6 +3,7 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import preprocessor.PreprocessDbUpdater;
 import ranking.DatasetBuilder;
+import ranking.Regression;
 import ranking.WordStatsBuilder;
 import search.SearchResponse;
 import search.Searcher;
@@ -37,6 +38,9 @@ public class Main {
           System.out.println("Building wordstats");
           WordStatsBuilder.build();
           break;
+        case "-regression":
+          System.out.println("Calculating regression coefs");
+          Regression.calculateCoefs();
       }
     } else {
       System.out.println("Search by console input");

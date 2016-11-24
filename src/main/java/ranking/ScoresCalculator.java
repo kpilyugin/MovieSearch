@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ScoresCalculator {
@@ -21,8 +22,16 @@ public class ScoresCalculator {
     //select AVG(char_length(preprocessed_plot)) from search;
     private static final double PPLOT_DL_AVE = 304.5917151541467651;
 
-    public static final String[] SCORES =
-            {"lucene", "review_cnt", "cos-p", "tf-idf_p", "bm25_p", "cos-pp", "tf-idf_pp", "bm25_pp"};
+    public static final String[] SCORES = {
+            "lucene",
+            "review_cnt",
+            "cos-p", "tf-idf_p", "bm25_p",
+            "cos-pp", "tf-idf_pp", "bm25_pp",
+            "has_plot", "has_pplot",
+            "substr_plot", "substr_review",
+            "uword_p", "uword_pp",
+            "fw_p", "fw_pp"
+    };
 
     private final Preprocessor preprocessor;
 
@@ -47,7 +56,55 @@ public class ScoresCalculator {
         }
         scores.put("has_plot", candidate.getPlotStats().isEmpty() ? 0.0 : 1.0);
         scores.put("has_pplot", candidate.getProcessedPlotsStats().isEmpty() ? 0.0 : 1.0);
+        scores.put("substr_plot", hasSubstring(queryInfo.getQuery(), candidate.getPlot()));
+        scores.put("substr_review", hasSubstring(queryInfo.getQuery(), candidate.getReviews()));
+        scores.put("fw_p", foundWordsFraction(queryInfo.getStats(), candidate.getPlotStats()));
+        scores.put("fw_pp", foundWordsFraction(queryInfo.getStats(), candidate.getProcessedPlotsStats()));
         return scores;
+    }
+
+    public void calculateComplexScores(List<SearchCandidate> candidates, QueryInfo queryInfo) {
+        final Map<SearchCandidate, Double> uniquePlotWords = new HashMap<>();
+        final Map<SearchCandidate, Double> uniquePPlotWords = new HashMap<>();
+        for (String word : queryInfo.getStats().keySet()) {
+            SearchCandidate uniquePlotCandidate = null;
+            boolean uniquePlot = true;
+            for (SearchCandidate candidate : candidates) {
+                if (candidate.getPlotStats().containsKey(word)) {
+                    if (uniquePlotCandidate == null) {
+                        uniquePlotCandidate = candidate;
+                    } else {
+                        uniquePlot = false;
+                        break;
+                    }
+                }
+            }
+            if (uniquePlot) {
+                uniquePlotWords.put(uniquePlotCandidate,
+                        1.0 + uniquePlotWords.getOrDefault(uniquePlotCandidate, 0.0));
+            }
+            SearchCandidate uniquePPlotCandidate = null;
+            boolean uniquePPlot = true;
+            for (SearchCandidate candidate : candidates) {
+                if (candidate.getProcessedPlotsStats().containsKey(word)) {
+                    if (uniquePPlotCandidate == null) {
+                        uniquePPlotCandidate = candidate;
+                    } else {
+                        uniquePPlot = false;
+                        break;
+                    }
+                }
+            }
+            if (uniquePPlot) {
+                uniquePPlotWords.put(uniquePPlotCandidate,
+                        1.0 + uniquePPlotWords.getOrDefault(uniquePPlotCandidate, 0.0));
+            }
+        }
+        int words = queryInfo.getStats().size();
+        uniquePlotWords.entrySet()
+                .forEach(e -> e.getKey().getScores().put("uword_p", e.getValue() / words));
+        uniquePPlotWords.entrySet()
+                .forEach(e -> e.getKey().getScores().put("uword_pp", e.getValue() / words));
     }
 
     private static double sqr(double d) {
@@ -125,5 +182,20 @@ public class ScoresCalculator {
             score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * ((1 - BM25_B) + BM25_B * dl / dl_ave));
         }
         return score / query.size();
+    }
+
+    private static double hasSubstring(String query, String document) {
+        return document.toLowerCase().contains(query.toLowerCase()) ? 1.0 : 0.0;
+    }
+
+    private static double foundWordsFraction(Map<String, WordStat> query,
+                                             Map<String, WordStat> document) {
+        double foundWords = 0;
+        for (String word : query.keySet()) {
+            if (document.containsKey(word)) {
+                foundWords++;
+            }
+        }
+        return foundWords / query.size();
     }
 }

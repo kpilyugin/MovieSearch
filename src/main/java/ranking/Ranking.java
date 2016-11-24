@@ -28,6 +28,7 @@ public class Ranking {
             candidate.setScores(scoresCalculator.calculateScores(candidate, queryInfo));
             candidate.setFinalScore(scoresCombiner.combine(candidate.scores));
         });
+        scoresCalculator.calculateComplexScores(candidates, queryInfo);
 
         return candidates.stream()
                 .sorted(Comparator.comparing(c -> -c.getFinalScore()))

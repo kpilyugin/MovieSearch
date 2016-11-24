@@ -74,6 +74,7 @@ public class DatasetBuilder {
             preprocessor.preprocessCandidate(candidate);
             candidate.setScores(scoresCalculator.calculateScores(candidate, queryInfo));
         });
+        scoresCalculator.calculateComplexScores(candidates, queryInfo);
 
         return candidates.stream()
                 .map(c -> new HitResult(c.getMovieId(), c.getScores()))

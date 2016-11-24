@@ -9,12 +9,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ScoresCombiner {
-    public static final String COEF_FILE = "/home/ir/src/stackexchange/coef.txt";
+    public static final String COEF_FILE_PREFIX = "/home/ir/src/stackexchange/regression/";
+    public static final String COEF_FILE = "coef.txt";
     private final HashMap<String, Double> weights;
 
     public ScoresCombiner() throws IOException {
         weights = new HashMap<>();
-        readWeights(COEF_FILE);
+        readWeights(COEF_FILE_PREFIX + COEF_FILE);
     }
 
     public double combine(Map<String, Double> scores) {
@@ -24,7 +25,7 @@ public class ScoresCombiner {
     }
 
     public void setCoefFile(String coefFile) {
-        readWeights(coefFile);
+        readWeights(COEF_FILE_PREFIX + coefFile);
     }
 
     private void readWeights(String coefFile) {

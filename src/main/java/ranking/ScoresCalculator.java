@@ -79,7 +79,7 @@ public class ScoresCalculator {
                     }
                 }
             }
-            if (uniquePlot) {
+            if (uniquePlotCandidate != null && uniquePlot) {
                 uniquePlotWords.put(uniquePlotCandidate,
                         1.0 + uniquePlotWords.getOrDefault(uniquePlotCandidate, 0.0));
             }
@@ -95,7 +95,7 @@ public class ScoresCalculator {
                     }
                 }
             }
-            if (uniquePPlot) {
+            if (uniquePPlotCandidate != null && uniquePPlot) {
                 uniquePPlotWords.put(uniquePPlotCandidate,
                         1.0 + uniquePPlotWords.getOrDefault(uniquePPlotCandidate, 0.0));
             }

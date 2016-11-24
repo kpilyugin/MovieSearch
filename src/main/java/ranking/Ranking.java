@@ -8,7 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Ranking {
-    private static final int RESULTS_LIMIT = 20;
+    private static final int RESULTS_LIMIT = 30;
     private final Preprocessor preprocessor;
     private final ScoresCombiner scoresCombiner;
     private final ScoresCalculator scoresCalculator;

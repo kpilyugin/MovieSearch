@@ -32,7 +32,7 @@ public class Regression {
         try {
             Regression regression = new Regression();
             regression.trainModel();
-//            regression.writeCoefs();
+            regression.writeCoefs();
 
             regression.evalLuceneRanking();
             regression.evalRegressionRanking();

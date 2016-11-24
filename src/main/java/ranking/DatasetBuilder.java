@@ -48,19 +48,32 @@ public class DatasetBuilder {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                if (counter.incrementAndGet() % 5 == 0) {
+                if (counter.incrementAndGet() % 50 == 0) {
+                    synchronized (allResults) {
+                        try {
+                            saveResults(allResults);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                if (counter.get() % 5 == 0) {
                     System.out.println("processed: " + counter.get());
                 }
             });
-            Gson gson = new GsonBuilder()
-                    .setPrettyPrinting()
-                    .serializeSpecialFloatingPointValues()
-                    .create();
-            try (FileWriter writer = new FileWriter(resultsPath)) {
-                writer.write(gson.toJson(allResults.toArray(new DatasetEntry[0])));
-            }
+            saveResults(allResults);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void saveResults(List<DatasetEntry> allResults) throws IOException {
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .serializeSpecialFloatingPointValues()
+                .create();
+        try (FileWriter writer = new FileWriter(resultsPath)) {
+            writer.write(gson.toJson(allResults.toArray(new DatasetEntry[0])));
         }
     }
 

@@ -48,10 +48,11 @@ public class CandidateInfoProvider implements AutoCloseable {
         }
         conn.reviewsCountStatement.setString(1, movieId);
         final ResultSet reviewCntResults = conn.reviewsCountStatement.executeQuery();
-        if (!reviewCntResults.next()) {
-            System.err.println("review counts not found!");
+        int reviews = 0;
+        if (reviewCntResults.next()) {
+            reviews = reviewCntResults.getInt("cnt");
         }
-        final MovieInfo movieInfo = new MovieInfo(movieResults, reviewCntResults);
+        final MovieInfo movieInfo = new MovieInfo(movieResults, reviews);
         movieCache.put(movieId, movieInfo);
         return movieInfo;
     }
@@ -83,14 +84,14 @@ public class CandidateInfoProvider implements AutoCloseable {
         private final String date;
         private final int reviewsCount;
 
-        public MovieInfo(ResultSet movieResults, ResultSet reviewsResult) throws SQLException {
+        public MovieInfo(ResultSet movieResults, int reviewsCount) throws SQLException {
             this.imdb_id = movieResults.getString("imdb_id");
             this.title = movieResults.getString("title");
             this.plot = movieResults.getString("plot");
             this.poster_url = movieResults.getString("poster_url");
             this.actors = movieResults.getString("actors");
             this.date = movieResults.getString("date");
-            this.reviewsCount = reviewsResult.getInt("cnt");
+            this.reviewsCount = reviewsCount;
         }
     }
 

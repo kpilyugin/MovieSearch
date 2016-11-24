@@ -49,6 +49,8 @@ public class Ranking {
 
         private final double luceneScore;
 
+        private final int reviewCount;
+
         private double finalScore = 0.0;
         private Map<String, Double> scores = new HashMap<>();
         private final Map<String, WordStat> plotStats = new HashMap<>();

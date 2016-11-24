@@ -34,7 +34,7 @@ public class ScoresCalculator {
         Map<String, Double> scores = new HashMap<>();
         scores.put("id", 1.0);
         scores.put("lucene", candidate.getLuceneScore());
-        scores.put("review_cnt", getReviewCount(candidate.getMovieId()));
+        scores.put("review_cnt", (double) candidate.getReviewCount());
         if (!candidate.getPlotStats().isEmpty()) {
             scores.put("cos_p", cosScore(queryInfo.getStats(), candidate.getPlotStats()));
             scores.put("tf-idf_p", TFIDF(queryInfo.getStats(), candidate.getPlotStats(), preprocessor.plotsStat));
@@ -125,25 +125,5 @@ public class ScoresCalculator {
             score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * ((1 - BM25_B) + BM25_B * dl / dl_ave));
         }
         return score / query.size();
-    }
-
-    private double getReviewCount(String movieId) {
-        try {
-            DbConnection dbConnection = new DbConnection();
-            PreparedStatement s = dbConnection.connection.prepareStatement(
-                    "WITH counts AS (SELECT count(*) as cnt, movie_id FROM review GROUP BY movie_id) " +
-                            "SELECT cnt FROM counts WHERE movie_id = ?");
-            s.setString(1, movieId);
-            final ResultSet res = s.executeQuery();
-            if (!res.next()) {
-                return 0.0;
-            }
-            int cnt = res.getInt("cnt");
-            return (double) cnt;
-        } catch (SQLException e) {
-            System.err.println("Error getting review count " + e.getMessage());
-//            throw new RuntimeException("Error getting reviews count", e);
-            return 0.0;
-        }
     }
 }

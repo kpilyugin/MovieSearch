@@ -3,6 +3,7 @@ package ranking;
 import ranking.Ranking.SearchCandidate;
 import search.DbConnection;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -31,6 +32,14 @@ public class CandidateInfoProvider implements AutoCloseable {
             System.err.println("searchInfo not found!");
         }
 
+        int reviewCount = 0;
+        PreparedStatement s = conn.connection.prepareStatement("SELECT cnt FROM review_counts WHERE movie_id = ?");
+        s.setString(1, movieId);
+        final ResultSet reviewCntRes = s.executeQuery();
+        if (reviewCntRes.next()) {
+            reviewCount = reviewCntRes.getInt("cnt");
+        }
+
         return new SearchCandidate(
                 movieId,
                 movieInfo.getString("title"),
@@ -39,7 +48,8 @@ public class CandidateInfoProvider implements AutoCloseable {
                 searchInfo.getString("plot"),
                 searchInfo.getString("reviews"),
                 searchInfo.getString("preprocessed_plot"),
-                luceneScore
+                luceneScore,
+                reviewCount
         );
     }
 }

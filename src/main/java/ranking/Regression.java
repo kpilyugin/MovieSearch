@@ -34,8 +34,9 @@ public class Regression {
             regression.trainModel();
             regression.writeCoefs();
 
-            regression.testRanking();
-            regression.testWimmRanking();
+            regression.evalLuceneRanking();
+            regression.evalRegressionRanking();
+            regression.evalWimmRanking();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -103,7 +104,23 @@ public class Regression {
         return model;
     }
 
-    private void testRanking() {
+    private void evalLuceneRanking() {
+        RankingStats stats = new RankingStats();
+        for (DatasetEntry entry : dataset) {
+            List<String> answerImdb = entry.getQuery().getImdb();
+            if (!answerImdb.isEmpty()) {
+                List<String> ranks = entry.getResults().stream()
+                        .sorted(Comparator.comparingDouble(info -> -info.getScores().get("lucene")))
+                        .map(HitResult::getId)
+                        .collect(Collectors.toList());
+                int answerRank = ranks.indexOf(answerImdb.get(0));
+                stats.add(answerRank);
+            }
+        }
+        System.out.println("Lucene ranking: " + stats);
+    }
+
+    private void evalRegressionRanking() {
         RankingStats stats = new RankingStats();
         trainingSet.forEach((entry, value) -> {
             List<String> answerImdb = entry.getQuery().getImdb();
@@ -124,10 +141,10 @@ public class Regression {
                 stats.add(answerRank);
             }
         });
-        System.out.println("Train ranking: " + stats);
+        System.out.println("Regression ranking: " + stats);
     }
 
-    private void testWimmRanking() {
+    private void evalWimmRanking() {
         RankingStats stats = new RankingStats();
 
         for (WimmRanking ranking : wimmRankings) {
@@ -136,7 +153,7 @@ public class Regression {
             }
             stats.add(ranking.answerRank());
         }
-        System.out.println("Wimm matching: " + stats);
+        System.out.println("Wimm ranking: " + stats);
     }
 
     @Data

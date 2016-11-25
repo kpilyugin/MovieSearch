@@ -1,9 +1,11 @@
 package ranking;
 
 import lombok.Data;
+import org.postgresql.jdbc.PgArray;
 import ranking.Ranking.SearchCandidate;
 import search.DbConnection;
 
+import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -27,13 +29,17 @@ public class CandidateInfoProvider implements AutoCloseable {
         return new SearchCandidate(
                 movieId,
                 movieInfo.getTitle(),
-                movieInfo.getDate(),
+                movieInfo.getReleaseDate(),
                 movieInfo.getPoster_url(),
                 searchInfo.getPlot(),
                 searchInfo.getReviews(),
                 searchInfo.getPreprocessed_plot(),
                 luceneScore,
-                movieInfo.getReviewsCount()
+                movieInfo.getReviewsCount(),
+                movieInfo.getYear(),
+                movieInfo.getImdbRating(),
+                movieInfo.getType(),
+                movieInfo.getGenres()
         );
     }
 
@@ -80,18 +86,64 @@ public class CandidateInfoProvider implements AutoCloseable {
         private final String title;
         private final String plot;
         private final String poster_url;
-        private final String actors;
-        private final String date;
+        private final String[] actors;
+        /**
+         * That is usa release releaseDate, if I've got it right,
+         * so if u want 'real' year of the movie look at year field
+         */
+        private final String releaseDate;
         private final int reviewsCount;
+        private final String[] genres;
+        private final double imdbRating;
+        /**
+         * number of votes for the movie
+         */
+        private final int voteCnt;
+        /**
+         * Year is sometimes filled even though {@code releaseDate} field is empty
+         * (that is how imdb api works), so release releaseDate may be unknown, but
+         * movie year is known.
+         */
+        private final int year;
+        /**
+         * Movie type, may be one of:
+         *    - tv_episode
+         *    - tv_special
+         *    - documentary
+         *    - short
+         *    - tv_series
+         *    - video
+         *    - feature (that is regular full length movie)
+         */
+        private final String type;
 
         public MovieInfo(ResultSet movieResults, int reviewsCount) throws SQLException {
             this.imdb_id = movieResults.getString("imdb_id");
             this.title = movieResults.getString("title");
             this.plot = movieResults.getString("plot");
             this.poster_url = movieResults.getString("poster_url");
-            this.actors = movieResults.getString("actors");
-            this.date = movieResults.getString("date");
+
+            Array actorsArray = movieResults.getArray("actorsarr");
+            if (actorsArray == null) {
+                this.actors = new String[]{};
+            } else {
+                this.actors = (String[]) actorsArray.getArray();
+            }
+
+            this.releaseDate = movieResults.getString("date");
             this.reviewsCount = reviewsCount;
+
+            Array genresArray = movieResults.getArray("genres");
+            if (genresArray == null) {
+                this.genres = new String[]{};
+            } else {
+                this.genres = (String[]) genresArray.getArray();
+            }
+
+            this.imdbRating = movieResults.getDouble("rating");
+            this.voteCnt = movieResults.getInt("votes");
+            this.year = movieResults.getInt("year");
+            this.type = movieResults.getString("type");
         }
     }
 

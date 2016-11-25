@@ -10,8 +10,9 @@ public class SearchResponse {
   private final String movieId;
   private final String title;
   private final String plot;
-  private final String date;
+  private final String releaseDate;
   private final String poster;
+  private final int year;
   private final double score;
   private final String origin;
   private final String fragment;
@@ -21,11 +22,12 @@ public class SearchResponse {
     movieId = sc.getMovieId();
     title = sc.getTitle();
     plot = sc.getPlot();
-    date = sc.getDate();
+    releaseDate = sc.getReleaseDate();
     poster = sc.getPoster();
     score = sc.getFinalScore();
     origin = lr.getOrigin();
     fragment = lr.getFragment();
     debugScores = sc.getScores();
+    year = sc.getYear();
   }
 }

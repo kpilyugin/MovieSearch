@@ -45,16 +45,17 @@ public class Ranking {
         private final String movieId;
 
         private final String title;
-        private final String date;
+        private final String releaseDate;
         private final String poster;
-
         private final String plot;
         private final String reviews;
         private final String preprocessed_plot;
-
         private final double luceneScore;
-
         private final int reviewCount;
+        private final int year;
+        private final double imdbRating;
+        private final String type;
+        private final String[] genres;
 
         private double finalScore = 0.0;
         private Map<String, Double> scores = new HashMap<>();

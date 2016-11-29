@@ -125,7 +125,7 @@ public class CandidateInfoProvider implements AutoCloseable {
             this.plot = movieResults.getString("plot");
             this.poster_url = movieResults.getString("poster_url");
 
-            Array creditsArray = movieResults.getArray("credirs");
+            Array creditsArray = movieResults.getArray("credits");
             if (creditsArray == null) {
                 this.credits = new String[]{};
             } else {

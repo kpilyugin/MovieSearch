@@ -1,7 +1,6 @@
 package ranking;
 
 import lombok.Data;
-import org.postgresql.jdbc.PgArray;
 import ranking.Ranking.SearchCandidate;
 import search.DbConnection;
 
@@ -86,7 +85,10 @@ public class CandidateInfoProvider implements AutoCloseable {
         private final String title;
         private final String plot;
         private final String poster_url;
-        private final String[] actors;
+        /**
+         * Not just actors, but directors and other guys and girls...
+         */
+        private final String[] credits;
         /**
          * That is usa release releaseDate, if I've got it right,
          * so if u want 'real' year of the movie look at year field
@@ -123,11 +125,11 @@ public class CandidateInfoProvider implements AutoCloseable {
             this.plot = movieResults.getString("plot");
             this.poster_url = movieResults.getString("poster_url");
 
-            Array actorsArray = movieResults.getArray("actorsarr");
-            if (actorsArray == null) {
-                this.actors = new String[]{};
+            Array creditsArray = movieResults.getArray("credirs");
+            if (creditsArray == null) {
+                this.credits = new String[]{};
             } else {
-                this.actors = (String[]) actorsArray.getArray();
+                this.credits = (String[]) creditsArray.getArray();
             }
 
             this.releaseDate = movieResults.getString("date");

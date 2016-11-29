@@ -13,6 +13,8 @@ public class SearchResponse {
   private final String releaseDate;
   private final String poster;
   private final int year;
+  private final String[] genres;
+  private final double imdbRating;
   private final double score;
   private final String origin;
   private final String fragment;
@@ -29,5 +31,7 @@ public class SearchResponse {
     fragment = lr.getFragment();
     debugScores = sc.getScores();
     year = sc.getYear();
+    genres = sc.getGenres();
+    imdbRating = sc.getImdbRating();
   }
 }

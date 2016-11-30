@@ -37,6 +37,7 @@ public class CandidateInfoProvider implements AutoCloseable {
                 movieInfo.getReviewsCount(),
                 movieInfo.getYear(),
                 movieInfo.getImdbRating(),
+                movieInfo.getVoteCnt(),
                 movieInfo.getType(),
                 movieInfo.getGenres()
         );

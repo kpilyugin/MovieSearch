@@ -15,6 +15,7 @@ public class SearchResponse {
   private final int year;
   private final String[] genres;
   private final double imdbRating;
+  private final int voteCnt;
   private final double score;
   private final String origin;
   private final String fragment;
@@ -33,5 +34,6 @@ public class SearchResponse {
     year = sc.getYear();
     genres = sc.getGenres();
     imdbRating = sc.getImdbRating();
+    voteCnt = sc.getVoteCnt();
   }
 }

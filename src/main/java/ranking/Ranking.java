@@ -54,6 +54,7 @@ public class Ranking {
         private final int reviewCount;
         private final int year;
         private final double imdbRating;
+        private final int voteCnt;
         private final String type;
         private final String[] genres;
 

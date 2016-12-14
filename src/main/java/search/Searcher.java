@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class Searcher {
 
@@ -41,10 +43,12 @@ public class Searcher {
   public Searcher() throws IOException {
   }
 
-  public SearchResponse[] search(String query) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
+  public SearchResponse[] search(String query, Predicate<SearchCandidate> filter) throws ParseException, IOException, InvalidTokenOffsetsException, SQLException {
     final CandidatesResults results = getCandidates(query);
+    final List<SearchCandidate> filtered =
+            results.candidates.stream().filter(filter).collect(Collectors.toList());
 
-    return ranking.rerank(results.candidates, query).stream()
+    return ranking.rerank(filtered, query).stream()
             .map(c -> new SearchResponse(c, results.luceneResults.get(c.getMovieId())))
             .toArray(SearchResponse[]::new);
   }
@@ -102,7 +106,7 @@ public class Searcher {
   }
 
   @Data
-  public class LuceneResult {
+  public static class LuceneResult {
     private final String movieId;
     private final double score;
     private final String origin;
@@ -119,9 +123,24 @@ public class Searcher {
   }
 
   @Data
-  public class CandidatesResults {
+  public static class CandidatesResults {
     private final Map<String, LuceneResult> luceneResults;
     private final List<SearchCandidate> candidates;
+  }
+
+  public static class YearFilter implements Predicate<SearchCandidate> {
+    private final int y1;
+    private final int y2;
+
+    public YearFilter(int y1, int y2) {
+      this.y1 = y1;
+      this.y2 = y2;
+    }
+
+    @Override
+    public boolean test(SearchCandidate searchCandidate) {
+      return y1 <= searchCandidate.getYear() && searchCandidate.getYear() <= y2;
+    }
   }
 
 }

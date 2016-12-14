@@ -1,3 +1,4 @@
+import com.google.common.base.Predicates;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
@@ -6,6 +7,8 @@ import com.sun.net.httpserver.HttpServer;
 import lombok.Data;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import ranking.Ranking;
+import ranking.Ranking.SearchCandidate;
 import ranking.ScoresCombiner;
 import search.SearchResponse;
 import search.Searcher;
@@ -15,6 +18,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class SearchServer {
   public static final int PORT = 5242;
@@ -37,12 +41,23 @@ public class SearchServer {
       final List<NameValuePair> params = URLEncodedUtils.parse(httpExchange.getRequestURI(), "UTF-8");
       String requestString = null;
       String coefFile = ScoresCombiner.COEF_FILE;
+      int y1 = 0, y2 = 2100;
       for (NameValuePair param : params) {
         if (param.getName().equals("q")) {
           requestString = param.getValue();
         }
         if (param.getName().equals("coef")) {
           coefFile = param.getValue();
+        }
+        if (param.getName().equals("y1")) {
+          try {
+            y1 = Integer.parseInt(param.getValue());
+          } catch (NumberFormatException ignored) {}
+        }
+        if (param.getName().equals("y2")) {
+          try {
+            y2 = Integer.parseInt(param.getValue());
+          } catch (NumberFormatException ignored) {}
         }
       }
       searcher.setCoefFile(coefFile);
@@ -54,8 +69,15 @@ public class SearchServer {
         return;
       }
 
+      Predicate<SearchCandidate> filter;
+      if (y1 != 0 || y2 != 2100) {
+        filter = new Searcher.YearFilter(y1, y2);
+      } else {
+        filter = c -> true;
+      }
+
       try {
-        SearchResponse[] response = searcher.search(requestString);
+        SearchResponse[] response = searcher.search(requestString, filter);
         Gson gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .serializeSpecialFloatingPointValues()

@@ -53,7 +53,7 @@ public class Main {
     try (Scanner scanner = new Scanner(System.in)) {
       while (scanner.hasNextLine()) {
         String line = scanner.nextLine();
-        SearchResponse[] responses = searcher.search(line);
+        SearchResponse[] responses = searcher.search(line, c -> true);
         for (int i = 0; i < responses.length; i++) {
           System.out.println((i + 1) + ": " + responses[i]);
         }

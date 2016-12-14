@@ -8,9 +8,8 @@ import search.DbConnection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class ScoresCalculator {
     private static final double BM25_K1 = 1.3;
@@ -25,12 +24,13 @@ public class ScoresCalculator {
     public static final String[] SCORES = {
             "lucene",
             "review_cnt",
-            "cos-p", "tf-idf_p", "bm25_p",
-            "cos-pp", "tf-idf_pp", "bm25_pp",
+            "cos-p", "cos2-p", "tf-idf_p", "bm25_p",
+            "cos-pp", "cos2-pp", "tf-idf_pp", "bm25_pp",
             "has_plot", "has_pplot",
             "substr_plot", "substr_review",
             "uword_p", "uword_pp",
-            "fw_p", "fw_pp"
+            "fw_p", "fw_pp",
+            "rc", "vc", "rating"
     };
 
     private final Preprocessor preprocessor;
@@ -46,11 +46,13 @@ public class ScoresCalculator {
         scores.put("review_cnt", (double) candidate.getReviewCount());
         if (!candidate.getPlotStats().isEmpty()) {
             scores.put("cos_p", cosScore(queryInfo.getStats(), candidate.getPlotStats()));
+            scores.put("cos2_p", cosScore2(queryInfo.getStats(), candidate.getPlotStats()));
             scores.put("tf-idf_p", TFIDF(queryInfo.getStats(), candidate.getPlotStats(), preprocessor.plotsStat));
             scores.put("bm25_p", BM25(queryInfo.getStats(), candidate.getPlotStats(), preprocessor.plotsStat, PLOT_DL_AVE));
         }
         if (!candidate.getProcessedPlotsStats().isEmpty()) {
             scores.put("cos_pp", cosScore(queryInfo.getStats(), candidate.getProcessedPlotsStats()));
+            scores.put("cos2_pp", cosScore2(queryInfo.getStats(), candidate.getProcessedPlotsStats()));
             scores.put("tf-idf_pp", TFIDF(queryInfo.getStats(), candidate.getProcessedPlotsStats(), preprocessor.processedPlotsStat));
             scores.put("bm25_pp", BM25(queryInfo.getStats(), candidate.getProcessedPlotsStats(), preprocessor.processedPlotsStat, PPLOT_DL_AVE));
         }
@@ -60,6 +62,11 @@ public class ScoresCalculator {
         scores.put("substr_review", hasSubstring(queryInfo.getQuery(), candidate.getReviews()));
         scores.put("fw_p", foundWordsFraction(queryInfo.getStats(), candidate.getPlotStats()));
         scores.put("fw_pp", foundWordsFraction(queryInfo.getStats(), candidate.getProcessedPlotsStats()));
+        scores.put("rc", sat(candidate.getReviewCount()));
+        scores.put("vc", sat(candidate.getVoteCnt()));
+        scores.put("rating", candidate.getImdbRating() / 10.0);
+        //scores.put("type", vtype(candidate.getType()));
+        addTypes(scores, candidate.getType());
         return scores;
     }
 
@@ -127,6 +134,22 @@ public class ScoresCalculator {
         return score
                 / cosNorm(query)
                 / cosNorm(document);
+    }
+
+    private static double cosNorm2(Map<String, WordStat> stats) {
+        return Math.sqrt(stats.size());
+    }
+
+    private double cosScore2(Map<String, WordStat> query,
+                            Map<String, WordStat> document) {
+        double score = 0.0;
+        for (String word : query.keySet()) {
+            if (!document.containsKey(word)) continue;
+            score += 1;
+        }
+        return score
+                / cosNorm2(query)
+                / cosNorm2(document);
     }
 
     private static double idf_1(String word, Map<String, WordStat> collection) {
@@ -197,5 +220,27 @@ public class ScoresCalculator {
             }
         }
         return foundWords / query.size();
+    }
+
+    private static double sat(double v) {
+        return v / (1 + v);
+    }
+
+    private static List<String> vtypes = Arrays.asList(
+            "tv_series",
+            "tv_special",
+            "video_game",
+            "feature",
+            "documentary",
+            "tv_episode",
+            "video");
+    private static double vtype(String s) {
+        return (1 + vtypes.indexOf(s)) * 0.1;
+    }
+
+    private static void addTypes(Map<String, Double> scores, String type) {
+        for (int i = 0; i < vtypes.size(); i++) {
+            scores.put("type" + i, type.equals(vtypes.get(i)) ? 1.0 : 0.0);
+        }
     }
 }

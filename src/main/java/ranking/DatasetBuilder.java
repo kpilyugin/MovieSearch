@@ -22,7 +22,7 @@ import static ranking.DatasetEntry.*;
 
 public class DatasetBuilder {
     private static final String queriesPath = "/home/ir/src/stackexchange/queries.json";
-    public static final String resultsPath = "/home/ir/src/stackexchange/results_v3.json";
+    public static final String resultsPath = "/home/ir/src/stackexchange/results_v4.json";
 
     private final Searcher searcher = new Searcher();
     private final Preprocessor preprocessor = new Preprocessor();

@@ -1,6 +1,7 @@
 package ranking;
 
 import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
 import lombok.Data;
 import weka.classifiers.functions.LinearRegression;
 import weka.core.Attribute;
@@ -8,9 +9,11 @@ import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
 
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -20,12 +23,15 @@ public class Regression {
 
     private static final String WIMM = "/home/ir/src/stackexchange/wimm_ranged.json";
 
-    private final DatasetEntry[] dataset = readDataset();
-    private final WimmRanking[] wimmRankings = readWimmRanking();
+    private final DatasetEntry[] dataset;
+    private final WimmRanking[] wimmRankings;
     private final LinearRegression model = new LinearRegression();
-    private final Map<DatasetEntry, Map<HitResult, Instance>> trainingSet = new HashMap<>();
+    private final Set<Integer> testIndices = new HashSet<>();
+    private final Map<DatasetEntry, Map<HitResult, Instance>> testSet = new HashMap<>();
 
     public Regression() throws IOException {
+        dataset = readDataset();
+        wimmRankings = readWimmRanking();
     }
 
     public static void calculateCoefs() {
@@ -43,13 +49,26 @@ public class Regression {
     }
 
     private static DatasetEntry[] readDataset() throws IOException {
-        try (FileReader reader = new FileReader(DatasetBuilder.resultsPath)) {
-            return new Gson().fromJson(reader, DatasetEntry[].class);
+        List<DatasetEntry> result = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(DatasetBuilder.resultsPath));
+            JsonReader jsonReader = new JsonReader(reader)) {
+            Gson gson = new Gson();
+            jsonReader.beginArray();
+            int count = 0;
+            while (jsonReader.hasNext()) {
+                DatasetEntry entry = gson.fromJson(jsonReader, DatasetEntry.class);
+                count++;
+                if (count % 100 == 0) {
+                    System.out.println("read = " + count);
+                }
+                result.add(entry);
+            }
+            return result.toArray(new DatasetEntry[0]);
         }
     }
 
     private static WimmRanking[] readWimmRanking() throws IOException {
-        try (FileReader reader = new FileReader(WIMM)) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(WIMM))) {
             return new Gson().fromJson(reader, WimmRanking[].class);
         }
     }
@@ -66,6 +85,7 @@ public class Regression {
     }
 
     private LinearRegression trainModel() throws Exception {
+        System.out.println("Building model...");
         model.setRidge(100);
 
         ArrayList<Attribute> attributes = new ArrayList<>();
@@ -75,38 +95,49 @@ public class Regression {
         Attribute classAttr = new Attribute("Class", SCORES.length);
         attributes.add(classAttr);
 
-        Instances instances = new Instances("train", attributes, 1000);
-        instances.setClass(classAttr);
+        Instances train = new Instances("train", attributes, 1000);
+        train.setClass(classAttr);
 
-        for (DatasetEntry entry : dataset) {
+        Random r = new Random();
+        while (testIndices.size() < dataset.length * 0.2) {
+            testIndices.add(r.nextInt(dataset.length));
+        }
+        for (int i = 0; i < dataset.length; i++) {
+            DatasetEntry entry = dataset[i];
             List<String> answerImdb = entry.getQuery().getImdb();
             Map<HitResult, Instance> queryInstances = new HashMap<>();
             for (HitResult hitResult : entry.getResults()) {
                 boolean correct = answerImdb.contains(hitResult.getId());
                 DenseInstance instance = new DenseInstance(SCORES.length + 1);
-                instance.setDataset(instances);
-                for (int i = 0; i < SCORES.length; i++) {
-                    double value = hitResult.getScores().getOrDefault(SCORES[i], 0d);
-                    instance.setValue(i, value);
+                instance.setDataset(train);
+                for (int j = 0; j < SCORES.length; j++) {
+                    double value = hitResult.getScores().getOrDefault(SCORES[j], 0d);
+                    instance.setValue(j, value);
                 }
                 instance.setClassValue(correct ? 10 : 0);
-                instances.add(instance);
-                queryInstances.put(hitResult, instance);
+                if (!testIndices.contains(i)) {
+                    train.add(instance);
+                } else {
+                    queryInstances.put(hitResult, instance);
+                }
             }
-            trainingSet.put(entry, queryInstances);
+            if (testIndices.contains(i)) {
+                testSet.put(entry, queryInstances);
+            }
         }
         System.out.println("Training model...");
-        System.out.println("Train instances size = " + instances.size());
+        int testSize = testIndices.size();
+        System.out.println("Train size = " + (dataset.length - testSize) + ", test size = " + testSize);
         model.setDebug(true);
         model.setOutputAdditionalStats(true);
-        model.buildClassifier(instances);
+        model.buildClassifier(train);
         System.out.println("Result regression: " + model);
         return model;
     }
 
     private void evalLuceneRanking() {
         RankingStats stats = new RankingStats();
-        for (DatasetEntry entry : dataset) {
+        for (DatasetEntry entry : subset(dataset, testIndices)) {
             List<String> answerImdb = entry.getQuery().getImdb();
             if (!answerImdb.isEmpty()) {
                 List<String> ranks = entry.getResults().stream()
@@ -122,7 +153,7 @@ public class Regression {
 
     private void evalRegressionRanking() {
         RankingStats stats = new RankingStats();
-        trainingSet.forEach((entry, value) -> {
+        testSet.forEach((entry, value) -> {
             List<String> answerImdb = entry.getQuery().getImdb();
             if (!answerImdb.isEmpty()) {
                 List<RankingInfo> ranking = new ArrayList<>();
@@ -147,7 +178,7 @@ public class Regression {
     private void evalWimmRanking() {
         RankingStats stats = new RankingStats();
 
-        for (WimmRanking ranking : wimmRankings) {
+        for (WimmRanking ranking : subset(wimmRankings, testIndices)) {
             if (ranking.getAnswer().isEmpty()) {
                 continue;
             }
@@ -190,5 +221,15 @@ public class Regression {
         private int answerRank() {
             return wimm.indexOf(answer.get(0));
         }
+    }
+
+    private static <T> T[] subset(T[] data, Set<Integer> indices) {
+        //noinspection unchecked
+        T[] result = (T[]) Array.newInstance(data[0].getClass(), indices.size());
+        int i = 0;
+        for (Integer idx : indices) {
+            result[i++] = data[idx];
+        }
+        return result;
     }
 }

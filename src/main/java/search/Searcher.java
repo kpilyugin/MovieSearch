@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 
 public class Searcher {
 
-  private static final int CANDIDATES_LIMIT = 200; //
+  private static final int CANDIDATES_LIMIT = 150; //
 
   private final Directory index = FSDirectory.open(Paths.get(IndexBuilder.INDEX_DIRECTORY));
   private final IndexReader reader = DirectoryReader.open(index);
@@ -140,6 +140,22 @@ public class Searcher {
     @Override
     public boolean test(SearchCandidate searchCandidate) {
       return y1 <= searchCandidate.getYear() && searchCandidate.getYear() <= y2;
+    }
+  }
+
+  public static class RatingFilter implements Predicate<SearchCandidate> {
+    private final double ratingFrom;
+    private final double ratingTo;
+
+    public RatingFilter(double ratingFrom, double ratingTo) {
+      this.ratingFrom = ratingFrom;
+      this.ratingTo = ratingTo;
+    }
+
+    @Override
+    public boolean test(SearchCandidate searchCandidate) {
+      return ratingFrom <= searchCandidate.getImdbRating() &&
+              searchCandidate.getImdbRating() <= ratingTo;
     }
   }
 

@@ -144,8 +144,7 @@ public class Regression {
                         .sorted(Comparator.comparingDouble(info -> -info.getScores().get("lucene")))
                         .map(HitResult::getId)
                         .collect(Collectors.toList());
-                int answerRank = ranks.indexOf(answerImdb.get(0));
-                stats.add(answerRank);
+                stats.add(rank(ranks, answerImdb));
             }
         }
         System.out.println("Lucene ranking: " + stats);
@@ -168,8 +167,7 @@ public class Regression {
                         .sorted(Comparator.comparingDouble(info -> -info.getScore()))
                         .map(RankingInfo::getId)
                         .collect(Collectors.toList());
-                int answerRank = ranks.indexOf(answerImdb.get(0));
-                stats.add(answerRank);
+                stats.add(rank(ranks, answerImdb));
             }
         });
         System.out.println("Regression ranking: " + stats);
@@ -182,9 +180,22 @@ public class Regression {
             if (ranking.getAnswer().isEmpty()) {
                 continue;
             }
-            stats.add(ranking.answerRank());
+            stats.add(rank(ranking.getWimm(), ranking.answer));
         }
         System.out.println("Wimm ranking: " + stats);
+    }
+
+    private static int rank(List<String> r, List<String> ans) {
+        int m = -1;
+        for (String a : ans) {
+            int idx = r.indexOf(a);
+            if (idx != -1) {
+                if (m == -1 || idx < m) {
+                    m = idx;
+                }
+            }
+        }
+        return m;
     }
 
     @Data
@@ -192,13 +203,13 @@ public class Regression {
         private int withAnswer;
         private int noMatch;
         private int outOfTen;
-        private final int[] rankings = new int[10];
+        private final int[] rankings = new int[50];
 
         public void add(int answerRank) {
             withAnswer++;
             if (answerRank == -1) {
                 noMatch++;
-            } else if (answerRank >= 10) {
+            } else if (answerRank >= 50) {
                 outOfTen++;
             } else {
                 rankings[answerRank]++;
@@ -217,10 +228,6 @@ public class Regression {
         private final String query;
         private final List<String> answer;
         private final List<String> wimm;
-
-        private int answerRank() {
-            return wimm.indexOf(answer.get(0));
-        }
     }
 
     private static <T> T[] subset(T[] data, Set<Integer> indices) {

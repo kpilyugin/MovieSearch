@@ -42,6 +42,7 @@ public class SearchServer {
       String requestString = null;
       String coefFile = ScoresCombiner.COEF_FILE;
       int y1 = 0, y2 = 2100;
+      double ratingFrom = -1, ratingTo = 11;
       for (NameValuePair param : params) {
         if (param.getName().equals("q")) {
           requestString = param.getValue();
@@ -59,6 +60,16 @@ public class SearchServer {
             y2 = Integer.parseInt(param.getValue());
           } catch (NumberFormatException ignored) {}
         }
+        if (param.getName().equals("ratingFrom")) {
+          try {
+            ratingFrom = Double.parseDouble(param.getValue());
+          } catch (NumberFormatException ignored) {}
+        }
+        if (param.getName().equals("ratingTo")) {
+          try {
+            ratingTo = Double.parseDouble(param.getValue());
+          } catch (NumberFormatException ignored) {}
+        }
       }
       searcher.setCoefFile(coefFile);
       OutputStream output = httpExchange.getResponseBody();
@@ -69,11 +80,12 @@ public class SearchServer {
         return;
       }
 
-      Predicate<SearchCandidate> filter;
+      Predicate<SearchCandidate> filter = c -> true;
       if (y1 != 0 || y2 != 2100) {
-        filter = new Searcher.YearFilter(y1, y2);
-      } else {
-        filter = c -> true;
+        filter = filter.and(new Searcher.YearFilter(y1, y2));
+      }
+      if (ratingFrom != -1 || ratingTo != 11) {
+        filter = filter.and(new Searcher.RatingFilter(ratingFrom, ratingTo));
       }
 
       try {

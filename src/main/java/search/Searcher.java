@@ -99,7 +99,7 @@ public class Searcher {
 
       //noinspection deprecation
       TokenStream tokenStream = TokenSources.getAnyTokenStream(reader, hit.doc, field, doc, analyzer);
-      String fragment = highlighter.getBestFragment(tokenStream, doc.get(field));
+      String fragment = highlighter.getBestFragments(tokenStream, doc.get(field), 5, "<br />");
       results.add(new LuceneResult(doc.get("movie-id"), hit.score, field, fragment));
     }
     return results;
